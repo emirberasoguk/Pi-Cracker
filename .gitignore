@@ -1,0 +1,36 @@
+# --- Build Artifacts ---
+pi_script_bruteforce/pi_generator_dynamic
+*.o
+
+# --- Runtime & State ---
+*.state
+*.tmp
+bulunan_sifre.txt
+*.log
+
+# --- Sensitive Data (Captures & Handshakes) ---
+# Ignore everything in captures folder...
+Handshake/captures/*
+# ...but keep the folder structure (via .gitkeep)
+!Handshake/captures/.gitkeep
+!Handshake/captures/cap/
+!Handshake/captures/hc22000/
+
+# Also ignore these extensions globally just in case
+*.cap
+*.hc22000
+*.hccapx
+*.netxml
+*.csv
+*.kismet.csv
+
+# --- Large Wordlists ---
+Wordlist/*.txt
+!Wordlist/.gitkeep
+
+# --- OS & IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*~
