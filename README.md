@@ -34,16 +34,20 @@ Tek bir script (`pi_cracker.sh`) sisteminizi analiz eder ve en uygun saldırı v
 
 ```text
 /
-├── Docs/                   # Detaylı analiz raporları ve geliştirme notları
-│   ├── Turk_Wifi_Parola_Analizi.md  # Türkiye'ye özgü şifre kalıpları analizi
-│   └── Genel_Siber_Guvenlik_Raporu.md
+├── Docs/                       # Dokümantasyon
+│   └── Turk_Wifi_Parola_Analizi.md  # Türkiye'ye özgü şifre kalıpları analizi
 ├── Handshake/
-│   └── captures/           # Yakalanan ağ paketleri (.cap, .hc22000)
-├── Wordlist/               # Yardımcı ve "En Çok Kullanılan" wordlistler
-├── pi_script_bruteforce/   # Kaynak kodlar
-│   ├── pi_cracker.sh       # (ANA ÇALIŞTIRILABİLİR DOSYA)
-│   ├── pi_generator_dynamic.c # C tabanlı yüksek performanslı wordlist motoru
-│   └── pi_generator.state  # Kaldığı yeri hatırlayan durum dosyası
+│   └── captures/               # Yakalanan ağ paketleri
+│       ├── cap/                # .cap dosyaları (Aircrack-ng)
+│       └── hc22000/            # .hc22000 dosyaları (Hashcat)
+├── Wordlist/                   # Wordlistler
+│   ├── capture.txt
+│   └── probable-v2-wpa-top*.txt
+├── pi_script_bruteforce/       # Kaynak Kodlar
+│   ├── pi_cracker.sh           # (ANA ÇALIŞTIRILABİLİR DOSYA)
+│   ├── pi_generator_dynamic.c  # C tabanlı wordlist motoru
+│   └── pi_generator.state      # Durum dosyası
+├── LICENSE                     # Lisans dosyası
 └── README.md
 ```
 
@@ -102,7 +106,7 @@ cd pi_script_bruteforce
 ---
 
 ## 📝 Lisans
-Bu proje MIT Lisansı ile sunulmuştur. Açık kaynaklıdır ve geliştirilmeye açıktır.
+Bu proje MIT Lisansı ile sunulmuştur. Detaylar için `LICENSE` dosyasına bakınız.
 
 ---
 
@@ -140,16 +144,20 @@ A single script (`pi_cracker.sh`) analyzes your system and selects the most appr
 
 ```text
 /
-├── Docs/                   # Detailed analysis reports and development notes
-│   ├── Turk_Wifi_Parola_Analizi.md  # Analysis of Turkish-specific password patterns
-│   └── Genel_Siber_Guvenlik_Raporu.md
+├── Docs/                       # Documentation
+│   └── Turk_Wifi_Parola_Analizi.md  # Analysis of Turkish-specific password patterns
 ├── Handshake/
-│   └── captures/           # Captured network packets (.cap, .hc22000)
-├── Wordlist/               # Auxiliary and "most common" wordlists
-├── pi_script_bruteforce/   # Source code
-│   ├── pi_cracker.sh       # (MAIN EXECUTABLE FILE)
-│   ├── pi_generator_dynamic.c # C-based high-performance wordlist engine
-│   └── pi_generator.state  # State file to remember progress
+│   └── captures/               # Captured network packets
+│       ├── cap/                # .cap files (Aircrack-ng)
+│       └── hc22000/            # .hc22000 files (Hashcat)
+├── Wordlist/                   # Wordlists
+│   ├── capture.txt
+│   └── probable-v2-wpa-top*.txt
+├── pi_script_bruteforce/       # Source Code
+│   ├── pi_cracker.sh           # (MAIN EXECUTABLE FILE)
+│   ├── pi_generator_dynamic.c  # C-based wordlist engine
+│   └── pi_generator.state      # State file
+├── LICENSE                     # License file
 └── README.md
 ```
 
@@ -208,4 +216,4 @@ cd pi_script_bruteforce
 ---
 
 ## 📝 License
-This project is licensed under the MIT License. It is open-source and open for further development.
+This project is licensed under the MIT License. See `LICENSE` file for details.
