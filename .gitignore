@@ -33,4 +33,5 @@ Wordlist/*.txt
 Thumbs.db
 .vscode/
 .idea/
-*~
+*~extracted_rar/
+*.rar

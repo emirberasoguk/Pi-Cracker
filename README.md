@@ -17,7 +17,11 @@ Geleneksel "kaba kuvvet" (brute-force) saldırılarının hantallığını, **Pi
 ### 1. 🧠 Hibrit Saldırı Motoru
 Sıradan wordlistlerin aksine, Pi-Cracker iki farklı veri kaynağını harmanlar:
 *   **Matematiksel Kaynak:** Pi sayısının basamaklarını dinamik olarak hesaplar. Bu, diskte terabaytlarca yer kaplayan "Rainbow Table"lara ihtiyaç duymadan sonsuz bir şifre uzayı sağlar.
-*   **Sosyal Kaynak (OSINT):** Hedef kişinin adı, soyadı, yaşadığı şehir, plaka kodu ve tuttuğu takım gibi verileri alarak, Türk kullanıcılarının yaygın şifre oluşturma alışkanlıklarına (Örn: `Ahmet1905`, `istanbul34`) uygun kombinasyonlar üretir.
+*   **Sosyal Kaynak (OSINT & Akıllı Varyasyonlar):** Hedef kişinin adı, soyadı, yaşadığı şehir, plaka kodu ve tuttuğu takım gibi verileri alarak şu gelişmiş teknikleri kullanır:
+    *   **Leetspeak:** Karakterleri benzer rakam ve sembollerle değiştirir (Örn: `ali` -> `@l1`).
+    *   **Ters Çevirme (Reverse):** Kelimeleri tersten dener (Örn: `ahmet` -> `temha`).
+    *   **Akıllı Kombinasyonlar:** Kelimeleri semboller ve sayılarla birleştirir (Örn: `ahmet.1990`, `ali_34`, `yilmaz!`).
+    *   **Türk Kullanıcı Kalıpları:** Türk kullanıcılarının yaygın şifre oluşturma alışkanlıklarına uygun kombinasyonlar üretir.
 
 ### 2. ⚡ Akıllı Donanım Optimizasyonu (Unified Script)
 Tek bir script (`pi_cracker.sh`) sisteminizi analiz eder ve en uygun saldırı vektörünü seçer:
@@ -127,7 +131,11 @@ It aims to overcome the clumsiness of traditional "brute-force" attacks by lever
 ### 1. 🧠 Hybrid Attack Engine
 Unlike ordinary wordlists, Pi-Cracker blends two distinct data sources:
 *   **Mathematical Source:** Dynamically calculates the digits of Pi. This provides an infinite password space without requiring terabytes of disk space for "Rainbow Tables."
-*   **Social Source (OSINT):** Gathers information like the target's first name, last name, city, license plate code, and favorite team to generate combinations tailored to common Turkish password patterns (e.g., `Ahmet1905`, `istanbul34`).
+*   **Social Source (OSINT & Smart Variations):** Gathers information like the target's name, city, and favorite team, utilizing advanced techniques:
+    *   **Leetspeak:** Replaces characters with similar-looking numbers and symbols (e.g., `ali` -> `@l1`).
+    *   **Reverse:** Tries passwords in reverse order (e.g., `ahmet` -> `temha`).
+    *   **Smart Combinations:** Merges words with symbols and numbers (e.g., `ahmet.1990`, `ali_34`, `yilmaz!`).
+    *   **Turkish Password Patterns:** Tailors combinations to match common Turkish password creation habits.
 
 ### 2. ⚡ Smart Hardware Optimization (Unified Script)
 A single script (`pi_cracker.sh`) analyzes your system and selects the most appropriate attack vector:

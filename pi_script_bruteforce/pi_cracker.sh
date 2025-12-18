@@ -214,7 +214,7 @@ run_attack() {
 
     # --- FAZ 0: Hazır Wordlistler ---
     echo -e "\n${CYAN}===== FAZ 0: HAZIR WORDLISTLER DENENİYOR =====${NC}"
-    for wordlist in "$WORDLIST_DIR"/probable-v2-wpa-top*.txt;
+    for wordlist in "$WORDLIST_DIR"/*.txt;
         do
         if [ -f "$wordlist" ]; then
             echo -e "${YELLOW}[*] Wordlist: $(basename $wordlist)${NC}"
