@@ -29,9 +29,9 @@ TEMP_WORDLIST="pi_wordlist.tmp"
 check_dependencies() {
     echo -e "${BLUE}[*] Sistem bağımlılıkları kontrol ediliyor...${NC}"
     
-    # C Programı Kontrolü
-    if [ ! -x "$C_PROGRAM" ]; then
-        echo -e "${YELLOW}[!] C programı derlenmemiş. Derleniyor...${NC}"
+    # C Programı Kontrolü ve Derleme (Kaynak kod değiştiyse yeniden derle)
+    if [ ! -x "$C_PROGRAM" ] || [ "pi_generator_dynamic.c" -nt "$C_PROGRAM" ]; then
+        echo -e "${YELLOW}[!] C programı güncelleniyor/derleniyor...${NC}"
         gcc pi_generator_dynamic.c -o pi_generator_dynamic -lmpfr -lgmp
         if [ $? -ne 0 ]; then
             echo -e "${RED}[HATA] Derleme başarısız! 'libmpfr-dev' ve 'libgmp-dev' yüklü mü?${NC}"
@@ -55,6 +55,64 @@ check_dependencies() {
         then
         has_gpu=true
     fi
+}
+
+extract_network_info() {
+    echo -e "\n${CYAN}--- Ağ Bilgisi Analizi ---${NC}"
+    TARGET_BSSID=""
+    TARGET_ESSID=""
+
+    # 1. HC22000 Dosyasından Analiz
+    if [[ "$target_file" == *".hc22000" ]]; then
+        # Format: WPA*01*PMK*MAC_AP*MAC_CLIENT*ESSID(HEX)*...
+        # İlk satırı al
+        line=$(head -n 1 "$target_file")
+        
+        # MAC_AP (BSSID) - 4. alan (index 3, cut delimiter *)
+        raw_bssid=$(echo "$line" | cut -d'*' -f4)
+        if [ ! -z "$raw_bssid" ]; then
+            # aabbcc112233 -> aa:bb:cc:11:22:33 formatına gerek yok, C kodu temizliyor ama
+            # yine de görsel olarak kullanıcıya sunmak için formatlayabiliriz.
+            # C kodu raw (aabbcc...) kabul eder.
+            TARGET_BSSID="$raw_bssid"
+        fi
+
+        # ESSID (HEX) - 6. alan
+        essid_hex=$(echo "$line" | cut -d'*' -f6)
+        if [ ! -z "$essid_hex" ]; then
+            # Hex -> String
+            TARGET_ESSID=$(echo "$essid_hex" | xxd -r -p)
+        fi
+
+    # 2. CAP Dosyasından Analiz (hcxpcapngtool varsa)
+    elif [[ "$target_file" == *".cap" ]] && [ "$has_converter" = true ]; then
+        echo -e "${YELLOW}[*] Geçici dönüşüm ile analiz yapılıyor...${NC}"
+        tmp_hc="network_analyze_tmp.hc22000"
+        hcxpcapngtool -o "$tmp_hc" "$target_file" &> /dev/null
+        
+        if [ -f "$tmp_hc" ]; then
+             line=$(head -n 1 "$tmp_hc")
+             raw_bssid=$(echo "$line" | cut -d'*' -f4)
+             TARGET_BSSID="$raw_bssid"
+             essid_hex=$(echo "$line" | cut -d'*' -f6)
+             TARGET_ESSID=$(echo "$essid_hex" | xxd -r -p)
+             rm -f "$tmp_hc"
+        fi
+        
+    # 3. CAP Dosyasından Analiz (Fallback: aircrack-ng)
+    elif [[ "$target_file" == *".cap" ]]; then
+        echo -e "${YELLOW}[*] Aircrack-ng ile analiz yapılıyor...${NC}"
+        # Aircrack çıktısını parse etmek zordur, basit bir csv çıktısı alalım
+        aircrack-ng -w /dev/null "$target_file" 2>&1 | grep "1. " | head -n 1 > aircrack_out.tmp
+        # Çıktı: 1.  00:11:22:33:44:55  MyWiFi  WPA2 ...
+        # Bu çok güvenilir değil çünkü format değişebilir, ama deneyelim.
+        # Genellikle BSSID ilk sütundur.
+        # Bu kısmı karmaşıklaştırmayalım, manuel girişe bırakalım.
+        echo -e "${YELLOW}[!] Otomatik analiz için hcxpcapngtool önerilir.${NC}"
+    fi
+
+    echo -e "Bulunan BSSID: ${GREEN}${TARGET_BSSID:-Bulunamadı}${NC}"
+    echo -e "Bulunan ESSID: ${GREEN}${TARGET_ESSID:-Bulunamadı}${NC}"
 }
 
 select_attack_mode() {
@@ -165,12 +223,23 @@ get_target_file() {
         break
     done
     echo -e "${GREEN}[+] Hedef Dosya: $target_file${NC}"
+    
+    # Ağ analizini çağır
+    extract_network_info
 }
 
 get_user_info() {
     echo -e "\n${BLUE}--- Hedef Kişi Bilgileri (Akıllı Wordlist İçin) ---${NC}"
     echo -e "${YELLOW}(Bilmiyorsanız boş geçip Enter'a basın)${NC}"
 
+    # Ağ bilgilerini doğrula/iste
+    read -p "WiFi Adı (ESSID) [$TARGET_ESSID]: " input_essid
+    TARGET_ESSID=${input_essid:-$TARGET_ESSID}
+    
+    read -p "MAC Adresi (BSSID) [$TARGET_BSSID]: " input_bssid
+    TARGET_BSSID=${input_bssid:-$TARGET_BSSID}
+
+    echo ""
     read -p "Adı (Örn: Ahmet): " target_name
     read -p "Soyadı (Örn: Yilmaz): " target_surname
     read -p "Doğum Yılı (Örn: 1990): " target_year
@@ -194,7 +263,7 @@ get_user_info() {
     esac
     
     # Parametreleri hazırla
-    ARGS="--name \"$target_name\" --surname \"$target_surname\" --year \"$target_year\" --city \"$target_city\" --plate \"$target_plate\" --team \"$target_team\""
+    ARGS="--name \"$target_name\" --surname \"$target_surname\" --year \"$target_year\" --city \"$target_city\" --plate \"$target_plate\" --team \"$target_team\" --essid \"$TARGET_ESSID\" --bssid \"$TARGET_BSSID\""
 }
 
 run_attack() {

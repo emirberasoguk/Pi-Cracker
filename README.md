@@ -28,7 +28,15 @@ Tek bir script (`pi_cracker.sh`) sisteminizi analiz eder ve en uygun saldırı v
 *   **GPU Modu (Hashcat):** Eğer sisteminizde uyumlu bir ekran kartı ve Hashcat varsa, şifreleri C motorundan doğrudan Hashcat'e "pipe" (boru hattı) ile aktarır. Disk G/Ç darboğazına takılmadan saniyede binlerce/milyonlarca deneme yapabilir.
 *   **CPU Modu (Aircrack-ng):** GPU yoksa veya eski bir sistemse, otomatik olarak Aircrack-ng moduna geçer.
 
-### 3. 🔄 Otomatik Dosya Yönetimi
+### 3. 📡 Ağ Bilgisi Analizi ve Hedef Odaklı Saldırı
+Pi-Cracker, sadece kişisel bilgileri değil, hedef ağın kendi kimliğini de saldırıya dahil eder:
+*   **Otomatik Çıkarım:** Seçilen `.cap` veya `.hc22000` dosyasından ağın **BSSID** (MAC adresi) ve **ESSID** (WiFi adı) bilgilerini otomatik olarak çeker.
+*   **Ağa Özel Varyasyonlar:**
+    *   MAC adresinin son 4 ve 6 hanesini şifre olarak dener.
+    *   WiFi adını (Örn: `Starbucks`) alarak `starbucks123`, `Starbucks2024!` gibi akıllı kombinasyonlar türetir.
+    *   Modem marka/modeline yönelik (Örn: `superonlineXXXX`) varsayılan kalıpları test eder.
+
+### 4. 🔄 Otomatik Dosya Yönetimi
 *   **.cap -> .hc22000 Dönüşümü:** Hashcat modu için gerekli olan dosya formatı dönüşümünü (`hcxpcapngtool` varsa) otomatik yapar.
 *   **Klasör Yapısı:** Yakalanan ağ dosyalarını (`Handshake/captures/`) ve wordlistleri (`Wordlist/`) otomatik tanır.
 
@@ -142,7 +150,15 @@ A single script (`pi_cracker.sh`) analyzes your system and selects the most appr
 *   **GPU Mode (Hashcat):** If your system has a compatible graphics card and Hashcat, it pipes passwords directly from the C engine to Hashcat. This allows for thousands/millions of attempts per second without disk I/O bottlenecks.
 *   **CPU Mode (Aircrack-ng):** If no GPU is detected or on older systems, it automatically switches to Aircrack-ng mode.
 
-### 3. 🔄 Automatic File Management
+### 3. 📡 Network Information Analysis & Targeted Attack
+Pi-Cracker incorporates the target network's own identity into the attack:
+*   **Automatic Extraction:** Automatically retrieves the network's **BSSID** (MAC address) and **ESSID** (WiFi name) from the selected `.cap` or `.hc22000` file.
+*   **Network-Specific Variations:**
+    *   Tests the last 4 and 6 digits of the MAC address as potential passwords.
+    *   Uses the WiFi name (e.g., `Starbucks`) to derive smart combinations like `starbucks123` or `Starbucks2024!`.
+    *   Tests default patterns related to specific ISP/Modem brands (e.g., `superonlineXXXX`).
+
+### 4. 🔄 Automatic File Management
 *   **.cap -> .hc22000 Conversion:** Automatically performs the necessary file format conversion for Hashcat mode (if `hcxpcapngtool` is available).
 *   **Folder Structure:** Automatically recognizes capture files (`Handshake/captures/`) and wordlists (`Wordlist/`).
 

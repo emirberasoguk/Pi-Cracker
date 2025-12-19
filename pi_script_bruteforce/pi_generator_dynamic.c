@@ -17,6 +17,8 @@ typedef struct {
     char city[MAX_BUFFER];
     char plate[MAX_BUFFER];
     char team[MAX_BUFFER]; // gs, fb, bjk, ts
+    char bssid[MAX_BUFFER];
+    char essid[MAX_BUFFER];
 } UserInfo;
 
 // Global değişkenler
@@ -87,6 +89,42 @@ void capitalize(char *str) {
     if (str && str[0]) str[0] = toupper(str[0]);
 }
 
+// MAC Adresi Varyasyonları
+void generate_mac_variations(FILE *out, const char *mac) {
+    if (!mac || strlen(mac) < 4) return;
+    
+    // Mac formatı genellikle aabbcc112233 veya aa:bb:cc:11:22:33 gelir.
+    // Biz temizlenmiş (noktalama işaretsiz) halini varsayacağız veya temizleyeceğiz.
+    char clean_mac[MAX_BUFFER];
+    int j=0;
+    for(int i=0; mac[i]; i++) {
+        if(isalnum(mac[i])) clean_mac[j++] = tolower(mac[i]);
+    }
+    clean_mac[j] = '\0';
+    
+    int len = strlen(clean_mac);
+    if(len < 6) return; // En azından son 6 hane için
+    
+    // 1. Son 4 hane (Bazen pin kodu olabilir)
+    write_pass(out, clean_mac + len - 4);
+    
+    // 2. Son 6 hane
+    write_pass(out, clean_mac + len - 6);
+    
+    // 3. Tamamı
+    write_pass(out, clean_mac);
+    
+    // 4. Superonline gibi modlar için (Prefix + son 4/6 hane denemeleri main generate_variations içinde yapılabilir ama burada basit tutalım)
+    char buffer[MAX_BUFFER];
+    
+    // Superonline_X formatı için basit bir deneme
+    snprintf(buffer, MAX_BUFFER, "superonline%s", clean_mac + len - 4);
+    write_pass(out, buffer);
+    
+    snprintf(buffer, MAX_BUFFER, "superonline%s", clean_mac + len - 6); // Nadir ama deneyelim
+    write_pass(out, buffer);
+}
+
 // Belirli bir anahtar kelime için akıllı varyasyonlar üretir
 void generate_variations(FILE *out, const char *keyword) {
     if (!keyword || strlen(keyword) < 3) return; // Çok kısa kelimeleri atla
@@ -127,6 +165,19 @@ void generate_variations(FILE *out, const char *keyword) {
     numbers[num_count++] = "123";
     numbers[num_count++] = "1905"; // Takım yılları eklenebilir ama statik kısımda var
     numbers[num_count++] = "1234";
+    // Eger MAC varsa son 4 hanesini de ekleyelim sayı olarak
+    char mac_last4[5] = {0};
+    if (USER_INFO.bssid[0]) {
+         char clean_mac[MAX_BUFFER];
+         int j=0; 
+         for(int i=0; USER_INFO.bssid[i]; i++) if(isalnum(USER_INFO.bssid[i])) clean_mac[j++] = USER_INFO.bssid[i];
+         clean_mac[j] = '\0';
+         int clen = strlen(clean_mac);
+         if(clen >= 4) {
+             strncpy(mac_last4, clean_mac + clen - 4, 4);
+             numbers[num_count++] = mac_last4;
+         }
+    }
 
     // Kullanılacak semboller
     const char *symbols[] = {".", "_", "!", "@", "*"};
@@ -171,6 +222,10 @@ void generate_static_patterns(FILE *out) {
     char buffer[MAX_BUFFER];
     
     // printf("[*] Faz 1: Kişiselleştirilmiş desenler ve varyasyonlar üretiliyor...\n");
+    
+    // 0. Ağ Bilgileri (YENİ ÖZELLİK)
+    if (USER_INFO.essid[0]) generate_variations(out, USER_INFO.essid);
+    if (USER_INFO.bssid[0]) generate_mac_variations(out, USER_INFO.bssid);
 
     // 1. İsim ve Soyad için Akıllı Varyasyonlar (YENİ ÖZELLİK)
     if (USER_INFO.name[0]) generate_variations(out, USER_INFO.name);
@@ -252,6 +307,12 @@ void generate_pi_hybrid(long start_offset, long count, FILE *out) {
     // Leetspeak ismi önceden hazırla
     char name_leet[MAX_BUFFER] = {0};
     if (USER_INFO.name[0]) to_leetspeak(USER_INFO.name, name_leet);
+    
+    // ESSID önceden hazırla (YENİ)
+    char essid_clean[MAX_BUFFER] = {0};
+    if (USER_INFO.essid[0]) {
+         for(int i=0; USER_INFO.essid[i]; i++) essid_clean[i] = tolower(USER_INFO.essid[i]);
+    }
 
     for (long i = 0; i < count; i++) {
         if (*(p + PASS_LEN) == '\0') break;
@@ -275,6 +336,15 @@ void generate_pi_hybrid(long start_offset, long count, FILE *out) {
 
             // İsim + Sabit 4 Rakam
             fprintf(out, "%s%.*s\n", USER_INFO.name, 4, p);
+        }
+        
+        // 3. ESSID + Pi (YENİ)
+        if (essid_clean[0]) {
+            int elen = strlen(essid_clean);
+            int rem = PASS_LEN - elen;
+            if (rem > 0) {
+                 fprintf(out, "%s%.*s\n", essid_clean, rem, p);
+            }
         }
 
         p++; // Bir basamak kaydır
@@ -301,6 +371,8 @@ void parse_args(int argc, char *argv[]) {
         else if (strcmp(argv[i], "--city") == 0 && i+1 < argc) strcpy(USER_INFO.city, argv[++i]);
         else if (strcmp(argv[i], "--plate") == 0 && i+1 < argc) strcpy(USER_INFO.plate, argv[++i]);
         else if (strcmp(argv[i], "--team") == 0 && i+1 < argc) strcpy(USER_INFO.team, argv[++i]);
+        else if (strcmp(argv[i], "--bssid") == 0 && i+1 < argc) strcpy(USER_INFO.bssid, argv[++i]);
+        else if (strcmp(argv[i], "--essid") == 0 && i+1 < argc) strcpy(USER_INFO.essid, argv[++i]);
     }
 }
 
@@ -312,6 +384,8 @@ int main(int argc, char *argv[]) {
     for(int i=0; USER_INFO.surname[i]; i++) USER_INFO.surname[i] = tolower(USER_INFO.surname[i]);
     for(int i=0; USER_INFO.city[i]; i++) USER_INFO.city[i] = tolower(USER_INFO.city[i]);
     for(int i=0; USER_INFO.team[i]; i++) USER_INFO.team[i] = tolower(USER_INFO.team[i]);
+    for(int i=0; USER_INFO.essid[i]; i++) USER_INFO.essid[i] = tolower(USER_INFO.essid[i]);
+    // bssid için tolower generate_mac_variations içinde yapılıyor çünkü orada alphanumeric filtre de var.
 
     FILE *out;
     if (strcmp(OUTPUT_FILE, "/dev/stdout") == 0) {
