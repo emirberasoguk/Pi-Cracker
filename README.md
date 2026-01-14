@@ -69,6 +69,10 @@ Pi-Cracker, sadece kişisel bilgileri değil, hedef ağın kendi kimliğini de s
 
 Bu araç **Linux** ortamında (Kali Linux, Parrot OS, Ubuntu vb.) çalışmak üzere tasarlanmıştır.
 
+> **⚠️ Uyumluluk Notu (Windows/macOS):**
+> Bu araç, WiFi kartı üzerinde düşük seviye kontrol (Monitor Mode) ve ham paket erişimi gerektirdiği için Windows veya macOS üzerinde doğrudan çalışmayabilir.
+> Windows ve macOS kullanıcılarının **Sanal Makine (VirtualBox/VMware)** üzerine Kali Linux kurarak veya **Live USB** kullanarak çalıştırmaları önerilir.
+
 ### 1. Gereksinimlerin Yüklenmesi
 Sisteminize gerekli kütüphaneleri ve araçları yükleyin:
 
@@ -190,6 +194,10 @@ Pi-Cracker incorporates the target network's own identity into the attack:
 ## 🛠️ Installation
 
 This tool is designed to run in a **Linux environment** (e.g., Kali Linux, Parrot OS, Ubuntu).
+
+> **⚠️ Compatibility Note (Windows/macOS):**
+> Due to the requirement for low-level network card access (Monitor Mode) and raw packet manipulation, this tool may not function directly on Windows or macOS.
+> Users on these platforms are strongly recommended to use a **Kali Linux Virtual Machine (VirtualBox/VMware)** or a **Live USB**.
 
 ### 1. Install Dependencies
 Install the necessary libraries and tools on your system:
