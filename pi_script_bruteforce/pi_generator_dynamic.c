@@ -60,11 +60,12 @@ void save_next_offset(long offset) {
 // Update the UI status file with the current password
 void update_ui_status(const char *pass) {
     gen_counter++;
-    // Write every 3000th password to file to save I/O
-    if (gen_counter % 3000 == 0) {
+    // Write every 1500th password to file to save I/O but keep UI updated
+    if (gen_counter % 1500 == 0) {
         FILE *fp = fopen(PASS_STATUS_FILE, "w");
         if (fp) {
             fprintf(fp, "%s", pass);
+            fflush(fp); // Ensure immediate write
             fclose(fp);
         }
     }

@@ -23,6 +23,7 @@ typedef struct {
     char surname[64]; char year[16]; char city[64]; 
     char plate[8]; int teamIndex; 
     int passLen;
+    char numPassStr[16];
 } TargetProfile;
 
 // --- Globals ---
@@ -54,7 +55,10 @@ void AddLog(const char* msg) {
 void DetectTools() {
     if (system("command -v hashcat > /dev/null 2>&1") == 0) { 
         hasHashcat = true; 
-        if (system("hashcat -I | grep -Ei 'CUDA|OpenCL|NVIDIA|AMD|Intel' > /dev/null 2>&1") == 0) hasGPU = true; 
+    }
+    // Only enable GPU monitoring if nvidia-smi is available
+    if (system("command -v nvidia-smi > /dev/null 2>&1") == 0) {
+        hasGPU = true; 
     }
     if (system("command -v aircrack-ng > /dev/null 2>&1") == 0) hasAircrack = true;
     AddLog("> System Tools Detected.");
@@ -102,7 +106,10 @@ void ParseHC22000(const char *filepath, TargetProfile *t) {
     }
 }
 
-void CompileEngine() { system("gcc pi_generator_dynamic.c -o pi_generator_dynamic -lmpfr -lgmp"); }
+// Cleaned up CompileEngine - Compilation is handled by pi_cracker.sh
+void CompileEngine() { 
+    // No-op 
+}
 
 void ExportConfig(TargetProfile t, const char *captureFile) {
     char path[256];
@@ -112,6 +119,10 @@ void ExportConfig(TargetProfile t, const char *captureFile) {
     char teamCode[5] = "";
     if (t.teamIndex == 1) strcpy(teamCode, "gs"); else if (t.teamIndex == 2) strcpy(teamCode, "fb");
     else if (t.teamIndex == 3) strcpy(teamCode, "bjk"); else if (t.teamIndex == 4) strcpy(teamCode, "ts");
+
+    long long numPassVal = atoll(t.numPassStr);
+    if (numPassVal <= 0) numPassVal = 10;
+    numPassVal *= 1000000; // Convert millions to actual count
 
     fprintf(f, "TARGET_FILE=\"%s\"\n", captureFile);
     fprintf(f, "UI_ATTACK_MODE=\"%d\"\n", attackMode);
@@ -124,6 +135,7 @@ void ExportConfig(TargetProfile t, const char *captureFile) {
     fprintf(f, "TARGET_PLATE=\"%s\"\n", t.plate);
     fprintf(f, "TARGET_TEAM=\"%s\"\n", teamCode);
     fprintf(f, "TARGET_PASS_LEN=\"%d\"\n", t.passLen > 0 ? t.passLen : 8);
+    fprintf(f, "TARGET_NUM_PASS=\"%%lld\"\n", numPassVal);
     fclose(f);
     
     snprintf(path, sizeof(path), "%s/pi_start.signal", TMP_DIR);
@@ -163,31 +175,19 @@ void ReadStatusFiles() {
         fclose(f);
     }
 
-    // 2. Real Password
+    // 2. Real Password (ROBUST READ)
     snprintf(path, sizeof(path), "%s/pi_current_pass.txt", TMP_DIR);
     FILE *fp = fopen(path, "r");
     if (fp) {
-        fscanf(fp, "%127s", currentTriedPass);
-        fclose(fp);
-    }
-
-    // 3. Speed (Log is in TMP_DIR)
-    snprintf(path, sizeof(path), "tail -n 2 %s/attack.log 2>/dev/null", TMP_DIR);
-    FILE *fl = popen(path, "r");
-    if (fl) {
-        char line[512];
-        while(fgets(line, sizeof(line), fl)) {
-             if (strstr(line, "H/s") || strstr(line, "kH/s")) {
-                 char *s = strstr(line, "Speed");
-                 if (s) { strncpy(currentSpeed, s, 63); } 
-                 else {
-                     if(strlen(line) < 60) strncpy(currentSpeed, line, 63);
-                     else strncpy(currentSpeed, "Running...", 63);
-                 }
-             }
+        char tempBuff[128] = "";
+        if (fscanf(fp, "%127s", tempBuff) == 1) {
+            // Only update if we actually read something non-empty
+            if (strlen(tempBuff) > 0) {
+                strncpy(currentTriedPass, tempBuff, 127);
+                currentTriedPass[127] = '\0';
+            }
         }
-        currentSpeed[strcspn(currentSpeed, "\n")] = 0;
-        pclose(fl);
+        fclose(fp);
     }
 
     // 4. Cracked
@@ -195,6 +195,8 @@ void ReadStatusFiles() {
     FILE *fk = fopen(path, "r");
     if (fk) {
         if(fgets(foundPassword, 127, fk)) {
+            // Trim newline
+            foundPassword[strcspn(foundPassword, "\n")] = 0;
             passwordFound = true;
         }
         fclose(fk);
@@ -214,7 +216,8 @@ int main(void) {
         drops[i].color = Fade(LIME, GetRandomValue(30,90)/100.0f);
     }
 
-    TargetProfile target = {0}; target.passLen = 8; int activeTeam = 0; bool editMode[6] = {0}; bool editModePlate = false; bool editModeLen = false;
+    TargetProfile target = {0}; target.passLen = 8; strcpy(target.numPassStr, "10"); 
+    int activeTeam = 0; bool editMode[6] = {0}; bool editModePlate = false; bool editModeLen = false; bool editModePassNum = false;
     bool showBrowser = false;
 
     // Cleanup legacy files in current dir just in case
@@ -261,6 +264,10 @@ int main(void) {
             
             y+=65; GuiLabel((Rectangle){40,y,150,20},"Min Password Len"); 
             if (GuiSpinner((Rectangle){40, y+20, 100, 30}, NULL, &target.passLen, 8, 63, editModeLen)) editModeLen = !editModeLen;
+            
+            // NEW FIELD: Cycle Limit
+            GuiLabel((Rectangle){190,y,130,20},"Cycle (Million)");
+            if(GuiTextBox((Rectangle){190,y+20,80,30},target.numPassStr,16,editModePassNum)) editModePassNum=!editModePassNum;
 
             Rectangle rP = {880,80,300,700}; DrawRectangleRec(rP,Fade(BLACK,0.8f)); DrawRectangleLinesEx(rP,1,DARKGREEN);
             DrawText("SETTINGS",900,95,20,GREEN);
@@ -327,28 +334,48 @@ int main(void) {
             if (passwordFound) {
                 DrawRectangle(200, 200, 800, 400, BLACK);
                 DrawRectangleLines(200, 200, 800, 400, LIME);
-                DrawText("PASSWORD FOUND!", 400, 300, 40, LIME);
-                DrawText(foundPassword, 400, 380, 30, WHITE);
-                DrawText("Process Completed.", 430, 450, 20, GRAY);
-                if (GuiButton((Rectangle){450, 500, 300, 50}, "EXIT")) break;
+                
+                // Centered Text
+                int tw1 = MeasureText("PASSWORD FOUND!", 40);
+                int tw2 = MeasureText(foundPassword, 30);
+                int tw3 = MeasureText("Process Completed.", 20);
+                
+                // Blinking effect
+                Color titleColor = (GetTime() - (int)GetTime() < 0.5) ? LIME : GREEN;
+
+                DrawText("PASSWORD FOUND!", 200 + (800 - tw1)/2, 300, 40, titleColor);
+                DrawText(foundPassword, 200 + (800 - tw2)/2, 380, 30, WHITE);
+                DrawText("Process Completed.", 200 + (800 - tw3)/2, 450, 20, GRAY);
+                
+                if (GuiButton((Rectangle){450, 500, 300, 50}, "EXIT")) {
+                    system("pkill -9 hashcat 2>/dev/null; pkill -9 aircrack-ng 2>/dev/null");
+                    break;
+                }
             } else {
-                DrawRectangle(100, 200, 1000, 400, Fade(BLACK, 0.8f));
+                // Simplified Monitor UI
+                DrawRectangle(100, 200, 1000, 400, Fade(BLACK, 0.6f));
                 DrawRectangleLines(100, 200, 1000, 400, DARKGREEN);
                 
-                DrawText("CURRENT SPEED", 130, 230, 10, GRAY);
-                DrawText(currentSpeed, 130, 250, 50, LIME);
+                // Big "TRYING" Label
+                int wLabel = MeasureText("LAST ATTEMPT:", 20);
+                DrawText("LAST ATTEMPT:", 600 - wLabel/2, 250, 20, GRAY);
                 
-                DrawText("TRYING PASSWORD:", 130, 450, 20, DARKGRAY);
-                DrawText(currentTriedPass, 130, 480, 40, WHITE);
+                // Huge Password Display
+                // Truncate if too long to fit
+                char displayPass[32];
+                strncpy(displayPass, currentTriedPass, 31);
+                if (strlen(currentTriedPass) > 30) strcpy(displayPass + 28, "...");
+                
+                int wPass = MeasureText(displayPass, 60);
+                DrawText(displayPass, 600 - wPass/2, 350, 60, GOLD);
 
-                DrawText("ATTACK LOG", 600, 230, 10, GRAY);
-                DrawRectangleLines(600, 250, 450, 300, DARKGREEN);
-                DrawText("> Attack running...", 610, 260, 10, LIME);
-                DrawText(TextFormat("> Phase: %s", currentPhase), 610, 280, 10, GREEN);
-                if (hasGPU) DrawText(TextFormat("> GPU Temp: %.1f", gpuTemp), 610, 300, 10, GREEN);
-                DrawText("> Engine: Pi-Generator v2", 610, 320, 10, DARKGREEN);
+                // Engine Info
+                DrawText("Engine: Pi-Generator v2 (Hybrid)", 600 - MeasureText("Engine: Pi-Generator v2 (Hybrid)", 20)/2, 500, 20, DARKGREEN);
 
-                if (GuiButton((Rectangle){450, 700, 300, 60}, "STOP ATTACK")) break;
+                if (GuiButton((Rectangle){450, 700, 300, 60}, "STOP ATTACK")) {
+                    system("pkill -9 hashcat 2>/dev/null; pkill -9 aircrack-ng 2>/dev/null");
+                    break;
+                }
             }
         }
         EndDrawing();
