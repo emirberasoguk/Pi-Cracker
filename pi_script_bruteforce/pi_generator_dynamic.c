@@ -60,8 +60,8 @@ void save_next_offset(long offset) {
 // Update the UI status file with the current password
 void update_ui_status(const char *pass) {
     gen_counter++;
-    // Write every 1500th password to file to save I/O but keep UI updated
-    if (gen_counter % 1500 == 0) {
+    // Write every 150th password to file to save I/O but keep UI updated
+    if (gen_counter % 150 == 0) {
         FILE *fp = fopen(PASS_STATUS_FILE, "w");
         if (fp) {
             fprintf(fp, "%s", pass);
@@ -279,12 +279,9 @@ void generate_pi_hybrid(long start_offset, long count, FILE *out) {
 
     // 1. Pure Pi
     fprintf(out, "%.*s\n", PASS_LEN, p);
-    update_ui_status(p); // Update UI roughly here (p is just a ptr, but update_ui_status takes char*)
-                         // Note: We need a temp buffer to send exact pass to UI, but 
-                         // sending 'p' blindly prints whole string. Let's fix.
     
     char temp_pass[64];
-    snprintf(temp_pass, PASS_LEN + 1, "%s", p);
+    snprintf(temp_pass, sizeof(temp_pass), "%.*s", PASS_LEN, p);
     update_ui_status(temp_pass);
 
     // 2. Name + Pi

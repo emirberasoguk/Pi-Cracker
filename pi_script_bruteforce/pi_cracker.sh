@@ -195,6 +195,8 @@ if [ -d "$WORDLIST_DIR" ]; then
                 handle_success
             fi
         fi
+        
+        echo -e "${YELLOW}[*] Finished wordlist: $(basename "$wordlist")${NC}"
     done
 fi
 

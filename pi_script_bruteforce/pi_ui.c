@@ -180,7 +180,9 @@ void ReadStatusFiles() {
     FILE *fp = fopen(path, "r");
     if (fp) {
         char tempBuff[128] = "";
-        if (fscanf(fp, "%127s", tempBuff) == 1) {
+        if (fgets(tempBuff, sizeof(tempBuff), fp)) {
+            // Trim newline
+            tempBuff[strcspn(tempBuff, "\n")] = 0;
             // Only update if we actually read something non-empty
             if (strlen(tempBuff) > 0) {
                 strncpy(currentTriedPass, tempBuff, 127);
