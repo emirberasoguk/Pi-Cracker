@@ -1,11 +1,13 @@
 # --- Build Artifacts ---
 pi_script_bruteforce/pi_generator_dynamic
 *.o
-
+pi_script_bruteforce/pi_ui 
 # --- Runtime & State ---
 *.state
 *.tmp
 bulunan_sifre.txt
+*.log
+*.env
 *.log
 
 # --- Sensitive Data (Captures & Handshakes) ---
